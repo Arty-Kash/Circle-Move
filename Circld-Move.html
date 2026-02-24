@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>動的円描画アプリ</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; padding: 50px; background-color: #f5f7fa; color: #333; }
+        .container { background: white; padding: 40px; border-radius: 20px; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .slider-box { margin: 30px 0; }
+        input[type="range"] { width: 250px; cursor: pointer; }
+        .radius-value { font-size: 24px; font-weight: bold; color: #007bff; margin-left: 10px; }
+        #imageContainer { margin-top: 20px; height: 300px; display: flex; align-items: center; justify-content: center; }
+        img { max-height: 100%; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>リアルタイム円描画</h2>
+    
+    <div class="slider-box">
+        <label>半径：</label>
+        <input type="range" id="radiusSlider" min="1" max="100" value="50" oninput="updateValue(this.value)">
+        <span id="radiusValue" class="radius-value">50</span>
+    </div>
+
+    <div id="imageContainer">
+        <img id="resultImage" src="" style="display:none;">
+        <p id="status">スライダーを動かしてください</p>
+    </div>
+</div>
+
+<script>
+    // ColabのURLに書き換えてください
+    const API_URL = "https://nikita-locular-evidently.ngrok-free.dev/draw_circle";
+
+    let isPending = false; // 通信中かどうかを管理するフラグ
+
+    // 数値表示の更新と描画命令
+    function updateValue(val) {
+        document.getElementById('radiusValue').innerText = val;
+        drawCircle(val);
+    }
+
+    async function drawCircle(radius) {
+        // 通信中の場合は、前の通信が終わるまで待たずにスキップ（通信過多防止）
+        if (isPending) return; 
+        
+        isPending = true;
+        const imgElement = document.getElementById('resultImage');
+        const status = document.getElementById('status');
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ radius: parseFloat(radius) })
+            });
+
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const data = await response.json();
+            imgElement.src = "data:image/png;base64," + data.image_data;
+            imgElement.style.display = "inline";
+            status.style.display = "none";
+        } catch (error) {
+            console.error("Error:", error);
+            status.innerText = "エラー：URLを確認してください";
+        } finally {
+            isPending = false;
+        }
+    }
+
+    // 初回表示用
+    window.onload = () => drawCircle(50);
+</script>
+
+</body>
+</html>
